@@ -8,7 +8,13 @@ html(lang="en")
     link(rel="stylesheet", href="https://unpkg.com/mvp.css")
   body 
     header 
-      h1 zoom
+      h1 zoom 
     main 
-      h2 hi 
-      button call 
+      form#nick
+        input(type="text" placeholder="write the nickname" required)
+        button set 
+      ul 
+      form#message
+        input(type="text" placeholder="write the message" required)
+        button send 
+    script(src="/public/js/app.js") 
