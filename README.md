@@ -1,2 +1,1 @@
 # ZoomClone
-충동
