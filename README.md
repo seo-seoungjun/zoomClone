@@ -1,3 +1,1 @@
 # ZoomClone
-
-issue-commit test
