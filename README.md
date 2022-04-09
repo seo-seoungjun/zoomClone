@@ -1,3 +1,1 @@
 # ZoomClone
-
-허허
