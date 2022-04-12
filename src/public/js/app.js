@@ -1,42 +1,67 @@
-const soket = new WebSocket(`ws://${window.location.host}`);
-const messageList = document.querySelector("ul");
-const messageForm = document.querySelector("#message");
-const nickForm = document.querySelector("#nick");
+const soket = io();
 
-soket.addEventListener("open", () => {
-  console.log("connected to server ✅");
-});
+const RoomForm = document.querySelector("#welcome");
+const enterRoomBtn = RoomForm.querySelector("button");
+const room = document.querySelector("#room");
+const nickNameForm = document.querySelector("#name");
 
-soket.addEventListener("close", () => {
-  console.log("disconnected from the server ❌");
-});
+let roomName;
 
-function makeMessage(type, payload) {
-  const message = {
-    type,
-    payload,
-  };
-  return JSON.stringify(message);
-}
+room.hidden = true;
 
-function handelMessageSubmit(event) {
-  event.preventDefault();
-  const input = messageForm.querySelector("input");
-  soket.send(makeMessage("new_message", input.value));
-  input.value = "";
-}
-function handelNickSubmit(event) {
-  event.preventDefault();
-  const input = nickForm.querySelector("input");
-  soket.send(makeMessage("nickname", input.value));
-  input.value = "";
-}
-
-soket.addEventListener("message", (message) => {
+function addMessage(message) {
+  const ul = room.querySelector("ul");
   const li = document.createElement("li");
-  li.innerText = message.data;
-  messageList.append(li);
+  li.innerText = message;
+  ul.appendChild(li);
+}
+
+function showRoom() {
+  RoomForm.hidden = true;
+  nickNameForm.hidden = true;
+  room.hidden = false;
+  const h3 = room.querySelector("h3");
+  h3.innerText = `Room: ${roomName}`;
+}
+
+function handleRoomNameSubmit(e) {
+  e.preventDefault();
+  const input = RoomForm.querySelector("input");
+  roomName = input.value;
+  soket.emit("submitRoomName", roomName, showRoom);
+  input.value = "";
+}
+
+function handleNickNameSubmit(e) {
+  e.preventDefault();
+  const input = nickNameForm.querySelector("input");
+  const nickName = input.value;
+  soket.emit("submitNickName", nickName);
+  input.value = "";
+}
+
+function handleMesaageSubmit(e) {
+  e.preventDefault();
+  const input = room.querySelector("input");
+  const message = input.value;
+  input.value = "";
+  soket.emit("new_message", message, roomName, () => {
+    addMessage(`you: ${message}`);
+  });
+}
+
+nickNameForm.addEventListener("submit", handleNickNameSubmit);
+RoomForm.addEventListener("submit", handleRoomNameSubmit);
+room.addEventListener("submit", handleMesaageSubmit);
+
+soket.on("new_message", (message, nickName) => {
+  addMessage(`${nickName}: ${message}`);
 });
 
-messageForm.addEventListener("submit", handelMessageSubmit);
-nickForm.addEventListener("submit", handelNickSubmit);
+soket.on("enterRoom", (nickName) => {
+  addMessage(`${nickName} join room`);
+});
+
+soket.on("left_room", (nickName) => {
+  addMessage(`${nickName} left room`);
+});
