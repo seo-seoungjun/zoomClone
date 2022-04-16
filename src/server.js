@@ -1,6 +1,6 @@
 import express from "express";
 import http from "http";
-import WebSocket from "ws";
+import { Server } from "socket.io";
 import "dotenv/config";
 
 const env = process.env;
@@ -15,30 +15,32 @@ app.get("/", (req, res) => res.render("home"));
 const handleListen = () =>
   console.log(`Listening to http://localhost:${env.PORT}`);
 
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const httpServer = http.createServer(app);
+const wsServer = new Server(httpServer);
 
-const sokets = [];
-
-wss.on("connection", (soket) => {
-  // console.log(soket);
-  sokets.push(soket);
-  soket["nickname"] = "Anonnymous";
-  console.log("connected to Browser ✅");
-  soket.on("close", () => {
-    console.log("disconnect from the browser ❌");
+wsServer.on("connection", (soket) => {
+  soket["nickName"] = "익명";
+  soket.onAny((event) => {
+    console.log(`soket event: ${event}`);
   });
-  soket.on("message", (message) => {
-    const { type, payload } = JSON.parse(message.toString("utf-8"));
-    switch (type) {
-      case "new_message":
-        sokets.forEach((aSoket) => {
-          aSoket.send(`${soket.nickname}: ${payload}`);
-        });
-      case "nickname":
-        soket["nickname"] = payload;
-    }
+  soket.on("submitNickName", (nickName) => {
+    soket.nickName = nickName;
+  });
+  soket.on("submitRoomName", (roomName, done) => {
+    soket.join(roomName);
+    console.log(soket.rooms);
+    done();
+    soket.to(roomName).emit("enterRoom", soket.nickName);
+  });
+  soket.on("new_message", (message, room, done) => {
+    soket.to(room).emit("new_message", message, soket.nickName);
+    done();
+  });
+  soket.on("disconnecting", () => {
+    soket.rooms.forEach((room) =>
+      soket.to(room).emit("left_room", soket.nickName)
+    );
   });
 });
 
-server.listen(env.PORT, handleListen);
+httpServer.listen(env.PORT, handleListen);
