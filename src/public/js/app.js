@@ -4,6 +4,7 @@ const RoomForm = document.querySelector("#welcome");
 const enterRoomBtn = RoomForm.querySelector("button");
 const room = document.querySelector("#room");
 const nickNameForm = document.querySelector("#name");
+const openRooms = document.querySelector("#open-rooms");
 
 let roomName;
 
@@ -16,12 +17,12 @@ function addMessage(message) {
   ul.appendChild(li);
 }
 
-function showRoom() {
+function showRoom(users) {
   RoomForm.hidden = true;
   nickNameForm.hidden = true;
   room.hidden = false;
   const h3 = room.querySelector("h3");
-  h3.innerText = `Room: ${roomName}`;
+  h3.innerText = `Room: ${roomName} (${users})`;
 }
 
 function handleRoomNameSubmit(e) {
@@ -58,10 +59,24 @@ soket.on("new_message", (message, nickName) => {
   addMessage(`${nickName}: ${message}`);
 });
 
-soket.on("enterRoom", (nickName) => {
+soket.on("enterRoom", (nickName, users) => {
+  const h3 = room.querySelector("h3");
+  h3.innerText = `Room: ${roomName} (${users})`;
   addMessage(`${nickName} join room`);
 });
 
-soket.on("left_room", (nickName) => {
+soket.on("left_room", (nickName, users) => {
+  const h3 = room.querySelector("h3");
+  h3.innerText = `Room: ${roomName} (${users})`;
   addMessage(`${nickName} left room`);
+});
+
+soket.on("open_room", (rooms) => {
+  const roomList = openRooms.querySelector("ul");
+  roomList.innerHTML = "";
+  rooms.forEach((room) => {
+    const li = document.createElement("li");
+    li.innerText = room;
+    roomList.append(li);
+  });
 });
