@@ -1,6 +1,7 @@
 import express from "express";
 import http from "http";
-import WebSocket from "ws";
+import { Server } from "socket.io";
+import { instrument } from "@socket.io/admin-ui";
 import "dotenv/config";
 
 const env = process.env;
@@ -15,30 +16,67 @@ app.get("/", (req, res) => res.render("home"));
 const handleListen = () =>
   console.log(`Listening to http://localhost:${env.PORT}`);
 
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const httpServer = http.createServer(app);
+const wsServer = new Server(httpServer, {
+  cors: {
+    origin: ["https://admin.socket.io"],
+    credentials: true,
+  },
+});
 
-const sokets = [];
+instrument(wsServer, {
+  auth: false,
+});
 
-wss.on("connection", (soket) => {
-  // console.log(soket);
-  sokets.push(soket);
-  soket["nickname"] = "Anonnymous";
-  console.log("connected to Browser ✅");
-  soket.on("close", () => {
-    console.log("disconnect from the browser ❌");
-  });
-  soket.on("message", (message) => {
-    const { type, payload } = JSON.parse(message.toString("utf-8"));
-    switch (type) {
-      case "new_message":
-        sokets.forEach((aSoket) => {
-          aSoket.send(`${soket.nickname}: ${payload}`);
-        });
-      case "nickname":
-        soket["nickname"] = payload;
+function FindPublicRooms() {
+  const {
+    sockets: {
+      adapter: { rooms, sids },
+    },
+  } = wsServer;
+
+  const publicRooms = [];
+
+  rooms.forEach((_, key) => {
+    if (sids.get(key) === undefined) {
+      publicRooms.push(key);
     }
+  });
+  return publicRooms;
+}
+
+function countUsers(roomName) {
+  return wsServer.sockets.adapter.rooms.get(roomName)?.size;
+}
+
+wsServer.on("connection", (soket) => {
+  soket["nickName"] = "익명";
+  soket.onAny((event) => {
+    console.log(`soket event: ${event}`);
+  });
+  soket.on("submitNickName", (nickName) => {
+    soket.nickName = nickName;
+  });
+  soket.on("submitRoomName", (roomName, done) => {
+    soket.join(roomName);
+    console.log(soket.rooms);
+    const users = countUsers(roomName);
+    done(users);
+    soket.to(roomName).emit("enterRoom", soket.nickName, users);
+    wsServer.sockets.emit("open_room", FindPublicRooms());
+  });
+  soket.on("new_message", (message, room, done) => {
+    soket.to(room).emit("new_message", message, soket.nickName);
+    done();
+  });
+  soket.on("disconnecting", () => {
+    soket.rooms.forEach((room) =>
+      soket.to(room).emit("left_room", soket.nickName, countUsers(room) - 1)
+    );
+  });
+  soket.on("disconnect", () => {
+    wsServer.sockets.emit("open_room", FindPublicRooms());
   });
 });
 
-server.listen(env.PORT, handleListen);
+httpServer.listen(env.PORT, handleListen);
