@@ -10,18 +10,10 @@ html(lang="en")
     header 
       h1 zoom 
     main 
-      form#name
-        input(placeholder="Nickname" type="text" required)
-        button OK
-      form#welcome
-        input(placeholder="Room name" type="text" required)
-        button Enter Room
-      form#room
-        h3 
-        ul
-        input(placeholder="message" type="text")
-        button Send
-      h4#open-rooms Open Room:
-        ul 
+      div
+        video#myVideo(autoplay,playsinline, muted, width="400", height="400") 
+        button#mute Mute
+        button#camera Camera On 
+        select#cameras
     script(src="/socket.io/socket.io.js") 
     script(src="/public/js/app.js") 
