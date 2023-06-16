@@ -10,7 +10,11 @@ html(lang="en")
     header 
       h1 zoom 
     main 
-      div
+      div#welcome
+        form
+          input(type="text", placeholder="room name", required)
+          button Enter room 
+      div#call
         video#myVideo(autoplay,playsinline, muted, width="400", height="400") 
         button#mute Mute
         button#camera Camera On 
